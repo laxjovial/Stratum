@@ -5,4 +5,6 @@ psycopg2-binary
 firebase-admin
 pydantic[email]
 python-dotenv
+
 pytest
+
