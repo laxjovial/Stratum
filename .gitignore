@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+**/node_modules
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-wheel-metadata/
+.installed.cfg
+*.egg-info/
+
+# Next.js
+.next/
+out/
+
+# Test artifacts
+coverage/
+test.db
+*.sqlite
+*.sqlite3
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+packages/backend/.env
+# Keep this commented out if you want to commit the example file
+# firebase-service-account-key.json
+
+# IDE and OS files
+.vscode/
+.idea/
+*.DS_Store
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
