@@ -1,0 +1,17 @@
+{
+  "name": "stratum-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monorepo for the Stratum B2B SaaS platform.",
+  "author": "Architect (AI Agent)",
+  "license": "UNLICENSED",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:backend": "npm run dev --workspace=backend",
+    "build:frontend": "npm run build --workspace=frontend"
+  },
+  "devDependencies": {}
+}

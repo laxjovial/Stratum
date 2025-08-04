@@ -1,0 +1,67 @@
+# Stratum CI/CD Workflow (Placeholder)
+
+name: Stratum CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test_and_lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd packages/frontend
+          npm install
+
+      - name: Lint Frontend
+        run: |
+          cd packages/frontend
+          npm run lint
+
+      # Placeholder for backend/service test execution
+      # - name: Install Backend Dependencies
+      #   run: pip install -r packages/backend/requirements.txt
+      # - name: Run Backend Tests
+      #   run: # Add test command here
+
+  deploy:
+    needs: test_and_lint
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy Frontend to Vercel
+        # This will be handled automatically by the Vercel GitHub integration.
+        # A placeholder step can be added here if manual triggering is needed.
+        run: echo "Deploying to Vercel..."
+
+      - name: Build and Push Docker Images
+        # This step would build the backend and RAG service Docker images
+        # and push them to a container registry (e.g., GHCR or Docker Hub).
+        run: echo "Building and pushing Docker images..."
+
+      - name: Trigger Production Deployment
+        # This step would trigger the production environment (e.g., Railway, Fly.io)
+        # to pull the new images and restart the services.
+        run: echo "Triggering production deployment..."
