@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: stratum_postgres
+    environment:
+      POSTGRES_USER: stratum_user
+      POSTGRES_PASSWORD: stratum_password
+      POSTGRES_DB: stratum_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stratum_user -d stratum_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile
+    container_name: stratum_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./packages/backend/src:/app/src
+    environment:
+      - DATABASE_URL=postgresql://stratum_user:stratum_password@postgres:5432/stratum_db
+      - RAG_SERVICE_URL=http://rag_service:8001
+      # Stripe, Firebase, etc. env vars would be loaded from .env file
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  rag_service:
+    build:
+      context: ./packages/services/rag_pipeline
+      dockerfile: Dockerfile
+    container_name: stratum_rag_service
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./packages/services/rag_pipeline:/app
+    environment:
+      # These should be in an .env file at the root and passed in
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+
+  frontend:
+    build:
+      context: ./packages/frontend
+      dockerfile: Dockerfile
+    container_name: stratum_frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./packages/frontend:/app
+      - /app/node_modules # Exclude node_modules from being overwritten by the mount
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1 # This is for client-side fetches
+      # The server-side proxy would be configured in next.config.js
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+    driver: local

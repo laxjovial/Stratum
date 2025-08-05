@@ -1,72 +1,76 @@
-# Deployment Guide (Initial Draft)
+# Deployment Guide
 
-This document outlines the strategy and procedures for deploying the Stratum application.
+This document provides detailed instructions for deploying the Stratum application.
 
-## 1. Overview
+## 1. Architecture Overview
 
-The Stratum platform consists of three main deployable components housed in a single monorepo:
+The Stratum platform is a multi-service application orchestrated with Docker. It consists of three main services:
 1.  **Frontend (Next.js)**
 2.  **Backend (FastAPI)**
 3.  **RAG Service (Python)**
 
-We will use a multi-container approach, deploying each component to a hosting provider best suited for its needs. Continuous Integration and Continuous Deployment (CI/CD) will be managed via GitHub Actions.
+A PostgreSQL database is required for the backend. For local development, these services are managed by the `docker-compose.yml` file in the root directory.
 
-## 2. Local Development
+## 2. Local Development & Prerequisites
 
-For local development, a `docker-compose.yml` file will be provided in the root of the repository. This will allow developers to spin up the entire stack (frontend, backend, database, and services) with a single command.
+Before deploying, ensure you can run the application stack locally.
 
-**Command:** `docker-compose up`
+**Prerequisites:**
+*   Docker and Docker Compose
+*   An `.env` file in the root directory containing all necessary API keys (Pinecone, OpenAI, AWS, Stripe).
 
-## 3. Frontend Deployment (Next.js)
+**To run locally:**
+```bash
+docker-compose up --build
+```
+This command will build the images for all services and start them.
+*   Frontend will be accessible at `http://localhost:3000`
+*   Backend API will be at `http://localhost:8000`
+*   RAG Service will be at `http://localhost:8001`
 
-*   **Hosting Provider:** **Vercel**
-*   **Reasoning:** Vercel offers a seamless, first-class experience for deploying Next.js applications, with features like automatic deployments on git push, preview deployments for pull requests, and a global CDN.
+## 3. Production Deployment Strategy
 
-*   **Setup Steps:**
-    1.  Create a new project on Vercel.
-    2.  Connect the Vercel project to the GitHub repository.
-    3.  Configure the **Root Directory** in Vercel's project settings to be `packages/frontend`. This tells Vercel where to find the Next.js application within the monorepo.
-    4.  Set up environment variables in the Vercel dashboard.
+The recommended production deployment strategy involves deploying the services to cloud providers that specialize in container hosting.
 
-*   **Required Environment Variables:**
-    *   `NEXT_PUBLIC_FIREBASE_CONFIG`: The JSON configuration for the Firebase client SDK.
-    *   `NEXT_PUBLIC_API_URL`: The public URL of our deployed backend API (e.g., `https://api.stratum.app/api/v1`).
+*   **Frontend:** Vercel (for its first-class Next.js support)
+*   **Backend & RAG Service:** Railway or Fly.io (for their ease of use with Docker containers)
+*   **Database:** A managed PostgreSQL provider (e.g., Railway Postgres, AWS RDS, Supabase).
 
-## 4. Backend & Services Deployment (FastAPI & Python)
+## 4. Step-by-Step Deployment
 
-*   **Hosting Provider:** **Railway** or **Fly.io**
-*   **Reasoning:** These platforms provide excellent support for containerized applications, managed databases, and easy configuration of environment variables. They are developer-friendly and cost-effective for this type of architecture.
+### Step 4.1: Deploying the Backend & RAG Service
 
-*   **Containerization:**
-    *   A `Dockerfile` will be created for the FastAPI backend (`packages/backend/Dockerfile`).
-    *   A `Dockerfile` will be created for the RAG Service (`packages/services/rag_pipeline/Dockerfile`).
+These two services should be deployed together on a platform like Railway.
 
-*   **Setup Steps (General):**
-    1.  Create a new project on the chosen platform (e.g., Railway).
-    2.  Configure the project to deploy from the GitHub repository.
-    3.  Define two separate services within the project, pointing each to its respective `Dockerfile` in the monorepo.
-    4.  Provision a managed PostgreSQL database service.
-    5.  Set up environment variables for both the backend and the RAG service.
+1.  **Create a new project** on Railway and link it to your GitHub repository.
+2.  **Define the Services:**
+    *   Create a **"Backend"** service. In its settings, point it to the `packages/backend/Dockerfile`. Railway will automatically build and deploy from this Dockerfile.
+    *   Create a **"RAG Service"** service. Point it to the `packages/services/rag_pipeline/Dockerfile`.
+3.  **Provision a PostgreSQL Database:**
+    *   Add a new PostgreSQL database service within your Railway project.
+    *   Railway will provide a `DATABASE_URL` connection string.
+4.  **Configure Environment Variables:**
+    *   In the "Variables" tab for your Railway project, add all the necessary secrets:
+        *   `DATABASE_URL` (from the Postgres service)
+        *   `RAG_SERVICE_URL` (this will be the internal URL provided by Railway for your RAG service, e.g., `rag-service.railway.internal`)
+        *   `STRIPE_SECRET_KEY` & `STRIPE_WEBHOOK_SECRET`
+        *   `GOOGLE_APPLICATION_CREDENTIALS` (the content of your service account JSON file)
+        *   `PINECONE_API_KEY`, `OPENAI_API_KEY`, AWS keys, etc.
+    *   These variables will be available to both the Backend and RAG services.
+5.  **Deploy:** Trigger a deployment. Railway will build your containers and start the services. Note the public URL for your backend service (e.g., `https://stratum-backend-prod.up.railway.app`).
 
-*   **Required Environment Variables (Backend):**
-    *   `DATABASE_URL`: The connection string for the PostgreSQL database.
-    *   `FIREBASE_SERVICE_ACCOUNT_KEY`: The JSON key for the Firebase Admin SDK.
-    *   `PINECONE_API_KEY`: API key for Pinecone.
-    *   `OPENAI_API_KEY`: API key for OpenAI.
-    *   `S3_BUCKET_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`: Credentials for the file storage bucket.
+### Step 4.2: Deploying the Frontend
 
-*   **Required Environment Variables (RAG Service):**
-    *   (Similar to backend: Pinecone, OpenAI, and AWS credentials).
-
-## 5. CI/CD Pipeline
-
-A workflow will be defined in `.github/workflows/ci_cd.yml`.
-
-*   **On Pull Request:** The workflow will run linters and tests (once implemented) for all packages. It will not deploy.
-*   **On Merge to `main`:**
-    *   The workflow will trigger Vercel to deploy the `frontend` package.
-    *   The workflow will build and push the `backend` and `rag_service` Docker images to a container registry (e.g., Docker Hub or GitHub Container Registry).
-    *   The workflow will then trigger a deployment on the hosting provider (e.g., Railway) to pull the new images and restart the services.
+1.  **Create a new project** on Vercel and link it to your GitHub repository.
+2.  **Configure Project Settings:**
+    *   **Framework Preset:** Next.js
+    *   **Root Directory:** `packages/frontend`
+3.  **Configure Environment Variables:**
+    *   In the Vercel project settings, add the following environment variables:
+        *   `NEXT_PUBLIC_API_URL`: The public URL of your deployed backend service from Railway.
+        *   `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: Your Stripe publishable key.
+        *   `NEXT_PUBLIC_FIREBASE_*`: All the necessary Firebase client-side configuration keys.
+4.  **Deploy:** Vercel will automatically deploy the application. Any subsequent push to the `main` branch will trigger a new production deployment.
 
 ---
-*(This is an initial guide. Specific commands and configurations will be added as the project is developed.)*
+*This guide provides a high-level overview. Specific configurations may vary slightly based on the chosen cloud provider's UI and features.*

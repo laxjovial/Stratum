@@ -7,3 +7,4 @@ pydantic[email]
 python-dotenv
 pytest
 boto3
+stripe
