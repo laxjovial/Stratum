@@ -21,6 +21,7 @@ class FirstUserSetupPayload(BaseModel):
 
 from ..crud import role as crud_role
 
+
 @router.post("/first-user", response_model=schemas.User)
 def setup_first_user_and_organization(
     payload: FirstUserSetupPayload,
@@ -30,7 +31,9 @@ def setup_first_user_and_organization(
     """
     Handles the "First Run" experience for the very first user of an organization.
     This endpoint should be called once, immediately after signup.
+
     It transactionally creates the organization, default roles, and the first user (owner/admin).
+
     """
     firebase_uid = current_user.get("uid")
     user_email = current_user.get("email")
@@ -43,6 +46,7 @@ def setup_first_user_and_organization(
         raise HTTPException(
             status_code=400, detail="This user account has already completed setup."
         )
+
 
     # Using a single transaction for this whole setup
     try:
@@ -75,4 +79,5 @@ def setup_first_user_and_organization(
         raise HTTPException(status_code=500, detail=f"Failed to setup organization: {e}")
 
     db.refresh(new_user)
+
     return new_user

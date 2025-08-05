@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, OnDragEndResponder } from 'react-beautiful-dnd';
+
 import api from '../lib/api'; // Import the new API utility
+
 
 // --- Types ---
 interface Department {
@@ -12,8 +14,24 @@ interface Department {
   children: Department[];
 }
 
+
 // --- Helper function to build the tree structure ---
 const buildTree = (departments: Omit<Department, 'children'>[]): Department[] => {
+
+// --- Mock Data & API ---
+// In a real app, this would be fetched from the API
+const MOCK_DEPARTMENTS: Department[] = [
+  { id: '1', name: 'CEO Office', parent_department_id: null, children: [] },
+  { id: '2', name: 'Product Division', parent_department_id: '1', children: [] },
+  { id: '3', name: 'Engineering', parent_department_id: '2', children: [] },
+  { id: '4', name: 'Design', parent_department_id: '2', children: [] },
+  { id: '5', name: 'Revenue Division', parent_department_id: '1', children: [] },
+  { id: '6', name: 'Sales', parent_department_id: '5', children: [] },
+  { id: '7', name: 'Marketing', parent_department_id: '5', children: [] },
+];
+
+const buildTree = (departments: Department[]): Department[] => {
+
     const map = new Map<string, Department>();
     const roots: Department[] = [];
 
@@ -31,6 +49,7 @@ const buildTree = (departments: Omit<Department, 'children'>[]): Department[] =>
     return roots;
 };
 
+
 // --- Department Node Component ---
 const DepartmentNode = ({ dept, index }: { dept: Department; index: number }) => (
   <Draggable draggableId={dept.id} index={index}>
@@ -39,15 +58,25 @@ const DepartmentNode = ({ dept, index }: { dept: Department; index: number }) =>
         ref={provided.innerRef}
         {...provided.draggableProps}
         {...provided.dragHandleProps}
+
         className="p-3 mb-2 bg-white border rounded shadow-sm hover:bg-gray-50"
       >
         <p className="font-medium">{dept.name}</p>
+
+        className="p-3 mb-2 bg-white border rounded shadow-sm"
+      >
+        <p>{dept.name}</p>
+
         <Droppable droppableId={dept.id} type="DEPARTMENT">
           {(provided, snapshot) => (
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
+
               className={`ml-4 mt-2 p-2 min-h-[50px] rounded transition-colors ${snapshot.isDraggingOver ? 'bg-blue-100' : 'bg-gray-50'}`}
+
+              className={`ml-4 mt-2 p-2 min-h-[50px] rounded ${snapshot.isDraggingOver ? 'bg-blue-100' : 'bg-gray-50'}`}
+
             >
               {dept.children.map((child, childIndex) => (
                 <DepartmentNode key={child.id} dept={child} index={childIndex} />
@@ -63,6 +92,7 @@ const DepartmentNode = ({ dept, index }: { dept: Department; index: number }) =>
 
 // --- Main Org Chart Component ---
 export default function OrgChart() {
+
   const [departments, setDepartments] = useState<Omit<Department, 'children'>[]>([]);
   const [tree, setTree] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,6 +148,49 @@ export default function OrgChart() {
 
   if (loading) return <p>Loading hierarchy...</p>;
   if (error) return <p className="text-red-500">Error: {error}</p>;
+
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [tree, setTree] = useState<Department[]>([]);
+
+  useEffect(() => {
+    // TODO: Replace with actual API call to GET /departments/{org_id}
+    setDepartments(MOCK_DEPARTMENTS);
+  }, []);
+
+  useEffect(() => {
+    setTree(buildTree(departments));
+  }, [departments]);
+
+  const onDragEnd: OnDragEndResponder = (result) => {
+    const { destination, source, draggableId } = result;
+
+    if (!destination) {
+      return;
+    }
+
+    if (destination.droppableId === source.droppableId && destination.index === source.index) {
+      return;
+    }
+
+    // This is a complex operation. A real implementation would need a robust
+    // state management library (like Redux or Zustand) to handle this immutably.
+    // For now, we'll just update the parent and optimistically re-render.
+    const newParentId = destination.droppableId;
+
+    setDepartments(prevDepts => {
+        const newDepts = prevDepts.map(d => {
+            if (d.id === draggableId) {
+                // TODO: Here you would make the API call:
+                // PUT /departments/{draggableId} with body { parent_department_id: newParentId }
+                console.log(`Moving department ${draggableId} to new parent ${newParentId}`);
+                return { ...d, parent_department_id: newParentId };
+            }
+            return d;
+        });
+        return newDepts;
+    });
+  };
+
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>

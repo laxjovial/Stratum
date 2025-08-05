@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../hooks/use-auth';
+
 import api from '../../../lib/api'; // Import the new API utility
+
 
 export default function OrganizationSetupPage() {
   const { user, loading } = useAuth();
@@ -14,7 +16,11 @@ export default function OrganizationSetupPage() {
   // This is a placeholder for logic that would check if the user
   // is already part of an organization. In a real app, this might
   // be a flag on the user object from your backend or a separate API call.
+
   const needsSetup = true;
+
+  const needsSetup = true; // Assume true for this component's purpose
+
 
   useEffect(() => {
     if (!loading && !user) {
@@ -34,11 +40,31 @@ export default function OrganizationSetupPage() {
     }
 
     try {
+
       // Use the new API utility. It handles the token automatically.
       await api.post('/setup/first-user', {
         organization_name: orgName,
         user_full_name: user.displayName || user.email
       });
+
+
+      const token = await user.getIdToken();
+      // NOTE: This assumes the Next.js app is configured to proxy requests
+      // to the backend API to avoid CORS issues during development.
+      const response = await fetch('/api/v1/setup/first-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ organization_name: orgName, user_full_name: user.displayName || user.email }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to create organization.');
+      }
+
 
       // Successfully created, redirect to the main app dashboard
       router.push('/dashboard');

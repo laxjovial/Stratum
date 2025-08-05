@@ -20,10 +20,23 @@ export default function SignupPage() {
       return;
     }
     try {
+
       await createUserWithEmailAndPassword(auth, email, password);
       // After successful Firebase signup, the user is authenticated.
       // Redirect them to the mandatory setup flow.
       router.push('/setup/organization');
+
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // IMPORTANT: In a real app, this is where you would:
+      // 1. Get the JWT from the user object: `const token = await user.getIdToken();`
+      // 2. Call your backend API's `/auth/register` endpoint with the token and other user details.
+      // 3. Based on the response, redirect to the "First Run" organization setup flow.
+
+      // For this step, we'll just redirect to the home page.
+      router.push('/');
+
     } catch (error: any) {
       if (error.code === 'auth/email-already-in-use') {
         setError('This email address is already in use.');

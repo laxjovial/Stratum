@@ -1,3 +1,4 @@
+
 # Deployment Guide
 
 This document provides detailed instructions for deploying the Stratum application.
@@ -5,9 +6,11 @@ This document provides detailed instructions for deploying the Stratum applicati
 ## 1. Architecture Overview
 
 The Stratum platform is a multi-service application orchestrated with Docker. It consists of three main services:
+
 1.  **Frontend (Next.js)**
 2.  **Backend (FastAPI)**
 3.  **RAG Service (Python)**
+
 
 A PostgreSQL database is required for the backend. For local development, these services are managed by the `docker-compose.yml` file in the root directory.
 
