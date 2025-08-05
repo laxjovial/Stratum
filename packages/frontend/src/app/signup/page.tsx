@@ -20,6 +20,12 @@ export default function SignupPage() {
       return;
     }
     try {
+
+      await createUserWithEmailAndPassword(auth, email, password);
+      // After successful Firebase signup, the user is authenticated.
+      // Redirect them to the mandatory setup flow.
+      router.push('/setup/organization');
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
@@ -30,6 +36,7 @@ export default function SignupPage() {
 
       // For this step, we'll just redirect to the home page.
       router.push('/');
+
     } catch (error: any) {
       if (error.code === 'auth/email-already-in-use') {
         setError('This email address is already in use.');
