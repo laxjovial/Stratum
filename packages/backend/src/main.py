@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from . import models
 from .db.database import engine
-from .api import auth, organizations, users, departments, setup
+from .api import auth, organizations, users, departments, setup, documents, chat, lessons
 
 # This creates all the tables defined as models in the database.
 # In a production environment, you would use a migration tool like Alembic.
@@ -20,6 +20,9 @@ app.include_router(organizations.router)
 app.include_router(users.router)
 app.include_router(departments.router)
 app.include_router(setup.router)
+app.include_router(documents.router)
+app.include_router(chat.router)
+app.include_router(lessons.router)
 
 
 @app.get("/")
