@@ -2,7 +2,8 @@ import uuid
 import enum
 from sqlalchemy import Column, String, DateTime, func, ForeignKey, Enum as pgEnum
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
-from .base import Base
+from ..db.base import Base
+
 
 class DocumentStatus(str, enum.Enum):
     PENDING = "PENDING"
