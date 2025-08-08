@@ -3,7 +3,7 @@ from . import models
 from .db.database import engine
 
 from .api import auth, organizations, users, departments, setup, documents, chat, lessons, forums, analytics, billing
-=======
+
 from .api import auth, organizations, users, departments, setup
 
 
