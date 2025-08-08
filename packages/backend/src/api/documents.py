@@ -11,6 +11,10 @@ from ..crud import document as crud_document
 from ..db.database import get_db
 from sqlalchemy.orm import Session
 from ..core.firebase import get_current_user
+import uuid
+
+from typing import List
+
 
 router = APIRouter(
     prefix="/documents",
