@@ -64,7 +64,7 @@ services:
       - ./packages/frontend:/app
       - /app/node_modules # Exclude node_modules from being overwritten by the mount
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1 # This is for client-side fetches
+      - NEXT_PUBLIC_API_URL=http://127.0.0.1:8000 # This is for client-side fetches
       # The server-side proxy would be configured in next.config.js
     depends_on:
       - backend
