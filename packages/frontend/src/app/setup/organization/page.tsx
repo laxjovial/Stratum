@@ -19,8 +19,6 @@ export default function OrganizationSetupPage() {
 
   const needsSetup = true;
 
-  const needsSetup = true; // Assume true for this component's purpose
-
 
   useEffect(() => {
     if (!loading && !user) {
