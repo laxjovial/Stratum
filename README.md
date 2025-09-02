@@ -19,3 +19,8 @@ This repository is a monorepo containing the source code for the frontend, backe
 ## Documentation
 
 For a complete overview of the project, including business strategy, technical architecture, and user guides, please see the [documentation](./docs/).
+
+uvicorn packages.backend.src.main:app
+cd frontend
+npm install
+npm run dev

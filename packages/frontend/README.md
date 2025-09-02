@@ -4,3 +4,8 @@ This package contains the Next.js frontend application for Stratum. It is respon
 
 - `public/`: Static assets that are publicly accessible.
 - `src/`: The source code for the application.
+
+
+cd frontend
+npm install
+npm run dev
