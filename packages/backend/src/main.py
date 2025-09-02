@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from . import models
+from packages.backend.src import models
 from .db.database import engine
 
 from .api import auth, organizations, users, departments, setup, documents, chat, lessons, forums, analytics, billing

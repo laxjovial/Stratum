@@ -2,7 +2,7 @@ import uuid
 from sqlalchemy import Column, String, Text, DateTime, func, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
 from sqlalchemy.orm import relationship
-from .base import Base
+from packages.backend.src.db.base import Base
 
 class ForumThread(Base):
     __tablename__ = "forum_threads"

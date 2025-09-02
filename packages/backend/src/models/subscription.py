@@ -2,7 +2,7 @@ import uuid
 import enum
 from sqlalchemy import Column, String, DateTime, ForeignKey, Enum as pgEnum
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
-from .base import Base
+from packages.backend.src.db.base import Base
 
 class SubscriptionStatus(str, enum.Enum):
     ACTIVE = "active"

@@ -1,7 +1,7 @@
 import uuid
 from sqlalchemy import Column, String, Text, DateTime, func, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
-from .base import Base
+from packages.backend.src.db.base import Base
 
 class Lesson(Base):
     __tablename__ = "lessons"

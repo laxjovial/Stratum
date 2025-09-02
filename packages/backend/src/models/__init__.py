@@ -3,7 +3,7 @@ from .user import User
 from .organization import Organization
 from .department import Department
 from .role import Role
-from .subscription import Subscription
+from packages.backend.src.models.subscription import Subscription
 from .document import Document
 from .lesson import Lesson
 from .forum import ForumPost, ForumThread

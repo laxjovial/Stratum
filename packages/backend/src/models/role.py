@@ -3,7 +3,7 @@ from sqlalchemy import Column, String, JSON, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
 from sqlalchemy.orm import relationship
 
-from ..db.base import Base
+from packages.backend.src.db.base import Base
 
 class Role(Base):
     __tablename__ = "roles"
