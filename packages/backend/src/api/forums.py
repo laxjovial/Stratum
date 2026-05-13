@@ -6,7 +6,7 @@ from typing import List
 from .. import schemas
 from ..crud import forum as crud_forum, user as crud_user
 from ..db.database import get_db
-from ..core.firebase import get_current_user
+from ..core.auth import get_current_user
 
 router = APIRouter(
     prefix="/forums",

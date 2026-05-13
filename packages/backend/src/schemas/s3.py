@@ -1,11 +1,13 @@
 from pydantic import BaseModel
+from typing import Optional, Dict
 
 class PresignedUrl(BaseModel):
     url: str
-    fields: dict
+    fields: Optional[Dict] = None
+    provider: str # 's3' or 'supabase'
+    token: Optional[str] = None # For supabase direct upload if needed
 
 class S3UploadWebhookPayload(BaseModel):
-    # This is a simplified model. A real S3 event notification is more complex.
-    # It's typically nested inside an "Records" array.
     s3_key: str
     s3_bucket: str
+    provider: str = 's3'

@@ -1,7 +1,7 @@
 'use client';
 
 import { loadStripe } from '@stripe/stripe-js';
-import api from '../../lib/api';
+import { useApi } from '../../lib/api';
 
 // This publishable key would be loaded from environment variables
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'your_stripe_publishable_key');
@@ -37,6 +37,7 @@ const PlanCard = ({ plan, onSubscribe }: { plan: typeof plans[0], onSubscribe: (
 
 
 export default function PricingPage() {
+    const api = useApi();
     const handleCheckout = async (priceId: string) => {
         try {
             const { sessionId } = await api.post('/billing/create-checkout-session', {

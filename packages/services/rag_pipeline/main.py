@@ -2,8 +2,9 @@ from fastapi import FastAPI, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
+from typing import Optional
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
 app = FastAPI(
@@ -16,50 +17,51 @@ app = FastAPI(
 class ProcessRequest(BaseModel):
     s3_path: str
     organization_id: str
+    department_id: Optional[str] = None
+    owner_id: Optional[str] = None
+    section: Optional[str] = "General"
 
-from . import processor
+class QueryRequest(BaseModel):
+    query: str
+    organization_id: str
+    department_id: Optional[str] = None
+    owner_id: Optional[str] = None
+    section: Optional[str] = None
+    s3_path: Optional[str] = None
+
+import processor
 
 # --- Background Task ---
-def process_document_in_background(s3_path: str, organization_id: str):
-    """
-    This is the core function that will be executed in the background.
-    It calls the main orchestrator function from the processor module.
-    """
-    processor.process_document(s3_path, organization_id)
+def process_document_in_background(s3_path: str, organization_id: str, department_id: str, owner_id: str, section: str):
+    processor.process_document(s3_path, organization_id, department_id, owner_id, section)
 
 # --- API Endpoints ---
 @app.post("/process-document")
 async def trigger_document_processing(request: ProcessRequest, background_tasks: BackgroundTasks):
-    """
-    Receives a request (likely from the main backend) to process a document
-    that has been uploaded to S3.
-    """
     background_tasks.add_task(
         process_document_in_background,
         request.s3_path,
-        request.organization_id
+        request.organization_id,
+        request.department_id,
+        request.owner_id,
+        request.section
     )
     return {"message": "Document processing has been successfully queued."}
 
 from starlette.responses import StreamingResponse
 
-class QueryRequest(BaseModel):
-    query: str
-    organization_id: str
-
 @app.post("/query")
 def query_documents(request: QueryRequest):
-    """
-    Receives a query from the main backend, performs the RAG process,
-    and streams the response back.
-    """
     try:
         pc = processor.initialize_pinecone()
         index = pc.Index("stratum-index")
         stream = processor.get_query_response_stream(
-            pinecone_index=index,
             query=request.query,
-            organization_id=request.organization_id
+            organization_id=request.organization_id,
+            department_id=request.department_id,
+            owner_id=request.owner_id,
+            section=request.section,
+            s3_path=request.s3_path
         )
         return StreamingResponse(stream, media_type="text/event-stream")
     except Exception as e:
@@ -68,5 +70,4 @@ def query_documents(request: QueryRequest):
 
 @app.get("/health")
 def health_check():
-    """A simple health check endpoint to confirm the service is running."""
     return {"status": "ok", "service": "RAG Pipeline"}

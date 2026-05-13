@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from typing import Optional, List
 
-from ..core.firebase import get_current_user
+from ..core.auth import get_current_user
 from ..crud import user as crud_user
 from ..db.database import get_db
 
@@ -17,6 +18,8 @@ router = APIRouter(
 
 class ChatRequest(BaseModel):
     query: str
+    section: Optional[str] = None
+    document_id: Optional[str] = None
 
 @router.post("/")
 async def stream_chat_response(
@@ -25,39 +28,36 @@ async def stream_chat_response(
     db: Session = Depends(get_db)
 ):
     """
-    This endpoint is the primary interface for the user-facing chat.
-    It takes a user's query, retrieves their organization context,
-    forwards the request to the dedicated RAG service, and then
-    streams the response back to the client.
+    Relays the chat query to the RAG service for context-aware response generation.
     """
-    rag_service_url = os.getenv("RAG_SERVICE_URL")
-    if not rag_service_url:
-        raise HTTPException(status_code=503, detail="Chat service is not configured.")
-
-    # Get the user's organization ID from our database
+    # 1. Get user profile
     db_user = crud_user.get_user_by_firebase_uid(db, firebase_uid=current_user["uid"])
     if not db_user:
-        raise HTTPException(status_code=404, detail="User not found in database.")
+        raise HTTPException(status_code=404, detail="User not found")
 
-    organization_id = str(db_user.organization_id)
-
+    # 2. Call RAG service
+    rag_service_url = os.getenv("RAG_SERVICE_URL", "http://localhost:8001")
+    
     async def stream_generator():
-        """
-        A generator function that streams the response from the RAG service.
-        """
-        async with httpx.AsyncClient(timeout=300.0) as client:
+        async with httpx.AsyncClient(timeout=60.0) as client:
             try:
-                async with client.stream(
-                    "POST",
-                    f"{rag_service_url}/query",
-                    json={"query": request.query, "organization_id": organization_id}
-                ) as response:
-                    response.raise_for_status()
-                    async for chunk in response.aiter_bytes():
+                # Prepare payload for RAG service
+                payload = {
+                    "query": request.query,
+                    "organization_id": str(db_user.organization_id),
+                    "section": request.section,
+                    "s3_path": request.document_id # In the RAG service we use s3_path as unique doc ID
+                }
+                
+                async with client.stream("POST", f"{rag_service_url}/query", json=payload) as response:
+                    if response.status_code != 200:
+                        yield f"Error: RAG service returned {response.status_code}"
+                        return
+                        
+                    async for chunk in response.aiter_text():
                         yield chunk
-            except httpx.RequestError as e:
-                print(f"Error calling RAG service: {e}")
-                # Yield a user-friendly error message through the stream
-                yield b"data: {\"error\": \"The chat service is currently unavailable. Please try again later.\"}\n\n"
+            except Exception as e:
+                print(f"Chat Relay Error: {e}")
+                yield f"Error connecting to intelligence service: {str(e)}"
 
-    return StreamingResponse(stream_generator(), media_type="text/event-stream")
+    return StreamingResponse(stream_generator(), media_type="text/plain")

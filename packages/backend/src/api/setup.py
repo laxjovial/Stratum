@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from .. import schemas
 from ..crud import user as crud_user, organization as crud_organization
 from ..db.database import get_db
-from ..core.firebase import get_current_user
+from ..core.auth import get_current_user
 
 router = APIRouter(
     prefix="/setup",
@@ -17,6 +17,7 @@ router = APIRouter(
 class FirstUserSetupPayload(BaseModel):
     organization_name: str
     user_full_name: str | None = None
+    setup_type: str = "organization" # organization, department, individual
 
 
 from ..crud import role as crud_role
@@ -67,6 +68,9 @@ def setup_first_user_and_organization(
             email=user_email,
             full_name=payload.user_full_name,
             organization_id=new_org.id,
+            is_root=True,
+            onboarding_completed=True,
+            status="active"
         )
         new_user = crud_user.create_user(db, user=user_create)
 

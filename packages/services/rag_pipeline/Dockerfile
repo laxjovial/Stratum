@@ -1,10 +1,12 @@
 # Stage 1: Build stage with full build dependencies
-FROM python:3.11 as builder
+FROM python:3.11-slim as builder
 
 WORKDIR /usr/src/app
 
 # Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies
 COPY requirements.txt .
@@ -22,6 +24,10 @@ RUN pip install --no-cache /wheels/*
 
 # Copy application code
 COPY . .
+
+# Create a non-root user and switch to it
+RUN useradd -m stratum && chown -R stratum:stratum /app
+USER stratum
 
 # The port the application will run on
 EXPOSE 8001

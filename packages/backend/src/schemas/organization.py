@@ -22,9 +22,13 @@ class OrganizationInDBBase(OrganizationBase):
     class Config:
         from_attributes = True
 
+from .user import User
+from .department import Department
+
 # Properties to return to client
 class Organization(OrganizationInDBBase):
-    pass
+    users: list[User] = []
+    departments: list[Department] = []
 
 # Properties stored in DB
 class OrganizationInDB(OrganizationInDBBase):

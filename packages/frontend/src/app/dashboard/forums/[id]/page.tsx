@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import api from '../../../../lib/api';
+import { useApi } from '../../../../lib/api';
 import Link from 'next/link';
 
 // --- Types ---
@@ -24,6 +24,7 @@ const ReplyForm = ({ threadId, onPostSuccess }: { threadId: string; onPostSucces
     const [content, setContent] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const api = useApi();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -64,6 +65,7 @@ export default function ThreadViewPage({ params }: { params: { id: string } }) {
     const [thread, setThread] = useState<Thread | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const api = useApi();
 
     const fetchThread = async () => {
         try {

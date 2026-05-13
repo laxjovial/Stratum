@@ -4,17 +4,18 @@ from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 import httpx
+from sqlalchemy.orm import Session
+import uuid
+from typing import List, Optional
 
-from .. import schemas
-from ..schemas import s3 as s3_schemas
+from .. import schemas, models
+from ..schemas import s3 as storage_schemas
 from ..crud import document as crud_document
 from ..db.database import get_db
-from sqlalchemy.orm import Session
-from ..core.firebase import get_current_user
-import uuid
-
-from typing import List
-
+from ..core.auth import get_current_user
+from ..core.auth import supabase_client
+from ..crud import user as crud_user
+from ..core.hierarchy import is_superior_of
 
 router = APIRouter(
     prefix="/documents",
@@ -26,90 +27,111 @@ class PresignedUrlRequest(BaseModel):
     file_name: str
     file_type: str
 
-@router.post("/presigned-url", response_model=s3_schemas.PresignedUrl)
+@router.post("/presigned-url", response_model=storage_schemas.PresignedUrl)
 def create_presigned_url(
     request: PresignedUrlRequest,
     current_user: dict = Depends(get_current_user)
 ):
-    """
-    Generates a pre-signed URL that the client can use to upload a file directly to S3.
-    """
-    s3_client = boto3.client('s3', region_name=os.getenv("AWS_REGION"))
-    bucket_name = os.getenv("S3_BUCKET_NAME")
+    aws_key = os.getenv("AWS_ACCESS_KEY_ID")
+    bucket_name = os.getenv("S3_BUCKET_NAME", "stratum-docs")
+    object_key = f"uploads/{current_user['uid']}/{uuid.uuid4()}_{request.file_name}"
 
-    # Generate a unique path for the object in S3
-    # e.g., {organization_id}/{user_id}/{uuid}_{file_name}
-    object_key = f"uploads/{current_user['uid']}/{request.file_name}"
+    if aws_key:
+        try:
+            s3_client = boto3.client('s3', region_name=os.getenv("AWS_REGION", "us-east-1"))
+            response = s3_client.generate_presigned_post(
+                Bucket=bucket_name,
+                Key=object_key,
+                Fields={"Content-Type": request.file_type},
+                Conditions=[{"Content-Type": request.file_type}],
+                ExpiresIn=3600
+            )
+            return {"url": response["url"], "fields": response["fields"], "provider": "s3"}
+        except Exception: pass
 
-    try:
-        response = s3_client.generate_presigned_post(
-            Bucket=bucket_name,
-            Key=object_key,
-            Fields={"Content-Type": request.file_type},
-            Conditions=[{"Content-Type": request.file_type}],
-            ExpiresIn=3600  # URL expires in 1 hour
-        )
-        return response
-    except ClientError as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Could not generate pre-signed URL.")
+    if supabase_client:
+        try:
+            res = supabase_client.storage.from_("documents").create_signed_upload_url(object_key)
+            return {"url": res["signed_url"], "token": res["token"], "fields": {"key": object_key}, "provider": "supabase"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Storage provider error: {e}")
+
+    raise HTTPException(status_code=500, detail="No storage provider configured.")
 
 @router.get("/{organization_id}", response_model=List[schemas.Document])
-def read_documents_for_organization(
+def read_documents(
     organization_id: uuid.UUID,
-    skip: int = 0,
-    limit: int = 100,
+    section: Optional[str] = None,
+    department_id: Optional[uuid.UUID] = None,
     db: Session = Depends(get_db)
 ):
-    """
-    Retrieves a list of documents for a given organization.
-    """
-    # In a real app, you'd verify the requesting user has access to this org
-    documents = crud_document.get_documents_by_organization(
-        db, organization_id=organization_id, skip=skip, limit=limit
-    )
-    return documents
+    query = db.query(models.Document).filter(models.Document.organization_id == organization_id)
+    if section: query = query.filter(models.Document.section == section)
+    if department_id: query = query.filter(models.Document.department_id == department_id)
+    return query.all()
 
-@router.post("/webhook/s3-upload-complete")
-async def s3_upload_webhook(
-    payload: s3_schemas.S3UploadWebhookPayload,
-    db: Session = Depends(get_db)
+@router.post("/", response_model=schemas.Document)
+async def create_document_record(
+    document: schemas.DocumentCreate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
 ):
-    """
-    Webhook endpoint to be called by an S3 event notification when a file upload is complete.
-    This endpoint will then call the RAG service to start processing.
-    """
-    # 1. Find the user/organization associated with the upload from the s3_key
-    #    (This requires a more robust key generation strategy than the example above)
-    #    For now, we'll assume we can get the org_id.
-
-    # 2. Create a document record in our database
-    # doc_create = schemas.DocumentCreate(...)
-    # crud.document.create_document(db, document=doc_create)
-
-    # 3. Call the RAG service to trigger processing
-    rag_service_url = os.getenv("RAG_SERVICE_URL")
-    if not rag_service_url:
-        raise HTTPException(status_code=500, detail="RAG service is not configured.")
-
+    db_document = crud_document.create_document(db, document=document)
+    
+    rag_service_url = os.getenv("RAG_SERVICE_URL", "http://127.0.0.1:8001")
     async with httpx.AsyncClient() as client:
         try:
             await client.post(f"{rag_service_url}/process-document", json={
-                "s3_path": payload.s3_key,
-                "organization_id": "placeholder_org_id" # Replace with actual org_id
+                "s3_path": db_document.s3_path,
+                "organization_id": str(db_document.organization_id),
+                "section": db_document.section
             })
-        except httpx.RequestError as e:
-            print(f"Failed to call RAG service: {e}")
-            # Optionally update the document status to FAILED
-            raise HTTPException(status_code=503, detail="Could not queue document for processing.")
+            crud_document.update_document_status(db, db_document.s3_path, "PROCESSING")
+        except Exception: pass
 
-    return {"message": "Webhook received and processing triggered."}
+    return db_document
 
+@router.patch("/{document_id}", response_model=schemas.Document)
+def update_document(
+    document_id: uuid.UUID,
+    update: schemas.DocumentUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    db_doc = db.query(models.Document).filter(models.Document.id == document_id).first()
+    if not db_doc: raise HTTPException(status_code=404, detail="Document not found")
+    
+    db_user = crud_user.get_user_by_firebase_uid(db, firebase_uid=current_user["uid"])
+    
+    # Priority Control: Author or Superior can edit
+    if db_doc.uploader_id != db_user.id:
+        if not is_superior_of(db, db_user.id, db_doc.uploader_id):
+            raise HTTPException(status_code=403, detail="Superior priority required to edit this document")
 
-# Add a schema for the presigned URL response
-class PresignedUrl(BaseModel):
-    url: str
-    fields: dict
+    if update.section is not None: db_doc.section = update.section
+    if update.status is not None: db_doc.status = update.status
+    if hasattr(update, 'department_id') and update.department_id is not None:
+        db_doc.department_id = update.department_id
+        
+    db.commit()
+    db.refresh(db_doc)
+    return db_doc
 
-# Add this to schemas/document.py or a new file
-schemas.PresignedUrl = PresignedUrl
+@router.delete("/{document_id}")
+def delete_document(
+    document_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    db_doc = db.query(models.Document).filter(models.Document.id == document_id).first()
+    if not db_doc: raise HTTPException(status_code=404, detail="Document not found")
+    
+    db_user = crud_user.get_user_by_firebase_uid(db, firebase_uid=current_user["uid"])
+    
+    if db_doc.uploader_id != db_user.id:
+        if not is_superior_of(db, db_user.id, db_doc.uploader_id):
+            raise HTTPException(status_code=403, detail="Superior priority required to delete this document")
+    
+    db.delete(db_doc)
+    db.commit()
+    return {"message": "Document deleted"}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import api from '../../../../../lib/api';
+import { useApi } from '../../../../../lib/api';
 
 interface Lesson {
     id: string;
@@ -25,6 +25,7 @@ export default function LessonViewPage({ params }: { params: { id: string } }) {
     const [lesson, setLesson] = useState<Lesson | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const api = useApi();
 
     useEffect(() => {
         const fetchLesson = async () => {

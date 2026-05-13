@@ -1,12 +1,13 @@
 from __future__ import annotations
 from pydantic import BaseModel
 import uuid
-from typing import List
+from typing import List, Optional
 
 # Shared properties
 class DepartmentBase(BaseModel):
-    name: str | None = None
-    parent_department_id: uuid.UUID | None = None
+    name: Optional[str] = None
+    parent_department_id: Optional[uuid.UUID] = None
+    head_id: Optional[uuid.UUID] = None
 
 # Properties to receive on item creation
 class DepartmentCreate(DepartmentBase):
@@ -33,5 +34,4 @@ class DepartmentInDB(DepartmentInDBBase):
     pass
 
 # This allows Pydantic to process the forward reference to `Department`
-# within the `Department` model itself.
 Department.model_rebuild()

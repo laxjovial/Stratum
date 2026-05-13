@@ -9,5 +9,8 @@ python-dotenv
 pytest
 boto3
 stripe
-
-
+supabase
+python-jose[cryptography]
+stellar-sdk
+google-generativeai
+paystack-python

@@ -42,3 +42,5 @@ packages/backend/.env
 *.user
 *.userosscache
 *.sln.docstates
+.env
+*.env

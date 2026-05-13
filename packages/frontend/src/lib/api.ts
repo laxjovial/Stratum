@@ -1,68 +1,43 @@
-import { auth } from './firebase';
+import { useAuth } from '../hooks/use-auth';
+import { useCallback } from 'react';
 
-const getApiUrl = () => {
-  // This should be configured via environment variables for different environments (dev, prod)
-  // e.g., process.env.NEXT_PUBLIC_API_URL
-  // For local development, Next.js can be configured to proxy requests to the backend.
-  // We'll return a relative path assuming a proxy is set up.
-  return '/api/v1';
-};
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-const api = {
-  /**
-   * A wrapper around the native fetch API.
-   * - Automatically adds the Firebase auth token to the headers.
-   * - Sets the Content-Type to application/json.
-   * - Throws a detailed error on non-ok responses.
-   * - Handles responses with no content.
-   * @param endpoint The API endpoint to call (e.g., '/users').
-   * @param options Optional fetch options.
-   */
-  async request(endpoint: string, options: RequestInit = {}) {
-    const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+export function useApi() {
+  const { getToken } = useAuth();
 
-    const headers: Record<string, string> = {
+  const fetchWithAuth = useCallback(async (endpoint: string, options: RequestInit = {}) => {
+    const token = await getToken();
+    
+    const headers = {
       'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...options.headers,
     };
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${getApiUrl()}${endpoint}`, {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
     });
 
     if (!response.ok) {
-      // Try to parse error details from the response body
-      const errorData = await response.json().catch(() => ({ detail: 'An unknown API error occurred.' }));
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-    }
-
-    if (response.status === 204) { // No Content
-      return null;
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `API error: ${response.status}`);
     }
 
     return response.json();
-  },
+  }, [getToken]);
 
-  get(endpoint: string, options?: RequestInit) {
-    return this.request(endpoint, { ...options, method: 'GET' });
-  },
-
-  post(endpoint: string, body: unknown, options?: RequestInit) {
-    return this.request(endpoint, { ...options, method: 'POST', body: JSON.stringify(body) });
-  },
-
-  put(endpoint: string, body: unknown, options?: RequestInit) {
-    return this.request(endpoint, { ...options, method: 'PUT', body: JSON.stringify(body) });
-  },
-
-  delete(endpoint: string, options?: RequestInit) {
-    return this.request(endpoint, { ...options, method: 'DELETE' });
-  },
-};
-
-export default api;
+  return {
+    get: (endpoint: string) => fetchWithAuth(endpoint, { method: 'GET' }),
+    post: (endpoint: string, body: any) => fetchWithAuth(endpoint, { 
+      method: 'POST', 
+      body: JSON.stringify(body) 
+    }),
+    put: (endpoint: string, body: any) => fetchWithAuth(endpoint, { 
+      method: 'PUT', 
+      body: JSON.stringify(body) 
+    }),
+    delete: (endpoint: string) => fetchWithAuth(endpoint, { method: 'DELETE' }),
+  };
+}

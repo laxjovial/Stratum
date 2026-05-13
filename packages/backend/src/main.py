@@ -1,10 +1,9 @@
 from fastapi import FastAPI
-from packages.backend.src import models
+from fastapi.middleware.cors import CORSMiddleware
+from . import models
 from .db.database import engine
 
 from .api import auth, organizations, users, departments, setup, documents, chat, lessons, forums, analytics, billing
-
-from .api import auth, organizations, users, departments, setup
 
 
 # This creates all the tables defined as models in the database.
@@ -16,6 +15,15 @@ app = FastAPI(
     title="Stratum API",
     description="The backend API for the Stratum B2B SaaS platform.",
     version="0.1.0",
+)
+
+# CORS configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Include API routers
@@ -31,6 +39,9 @@ app.include_router(lessons.router)
 app.include_router(forums.router)
 app.include_router(analytics.router)
 app.include_router(billing.router)
+from .api import admin, activity
+app.include_router(admin.router)
+app.include_router(activity.router)
 
 
 

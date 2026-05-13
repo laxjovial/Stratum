@@ -16,9 +16,11 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
-// const analytics = getAnalytics(app);
+// Check if we have a valid configuration (not placeholders)
+export const isConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey !== "your_api_key_here";
+
+// Initialize Firebase only if configured
+const app = isConfigured ? (!getApps().length ? initializeApp(firebaseConfig) : getApp()) : null;
+const auth = isConfigured && app ? getAuth(app) : null;
 
 export { app, auth };

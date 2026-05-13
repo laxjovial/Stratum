@@ -3,7 +3,7 @@ from sqlalchemy import Column, String, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
 from sqlalchemy.orm import relationship
 
-from packages.backend.src.db.base import Base
+from ..db.base import Base
 
 class Department(Base):
     __tablename__ = "departments"
@@ -13,6 +13,9 @@ class Department(Base):
 
     organization_id = Column(pgUUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
     organization = relationship("Organization", back_populates="departments")
+
+    # The head of this department (User)
+    head_id = Column(pgUUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
 
     parent_department_id = Column(pgUUID(as_uuid=True), ForeignKey("departments.id"), nullable=True)
     parent = relationship("Department", remote_side=[id], back_populates="children")

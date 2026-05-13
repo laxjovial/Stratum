@@ -1,7 +1,7 @@
 import uuid
 from sqlalchemy import Column, String, Text, DateTime, func, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
-from packages.backend.src.db.base import Base
+from ..db.base import Base
 
 class Lesson(Base):
     __tablename__ = "lessons"
@@ -12,6 +12,9 @@ class Lesson(Base):
 
     organization_id = Column(pgUUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
     author_id = Column(pgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    
+    # Targeting a specific department for this lesson
+    target_department_id = Column(pgUUID(as_uuid=True), ForeignKey("departments.id"), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

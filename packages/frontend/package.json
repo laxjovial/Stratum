@@ -10,10 +10,18 @@
   },
   "dependencies": {
     "@stripe/stripe-js": "^3.0.0",
+    "@supabase/auth-helpers-nextjs": "^0.15.0",
+    "@supabase/supabase-js": "^2.105.3",
+    "@zxcvbn-ts/core": "^3.0.4",
+    "@zxcvbn-ts/language-common": "^3.0.4",
+    "@zxcvbn-ts/language-en": "^3.0.2",
     "firebase": "^10.14.1",
+    "lucide-react": "^1.14.0",
     "next": "^14.2.31",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "reactflow": "^11.11.4",
+    "zxcvbn-ts": "^2.1.0"
   },
   "devDependencies": {
     "@types/node": "^20",

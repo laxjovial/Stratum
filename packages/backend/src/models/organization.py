@@ -3,12 +3,14 @@ from sqlalchemy import Column, String, DateTime, func
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
 from sqlalchemy.orm import relationship
 
-from packages.backend.src.db.base import Base
+from ..db.base import Base
 class Organization(Base):
     __tablename__ = "organizations"
 
     id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False, index=True)
+    bank_details = Column(String(1000), nullable=True) # For manual bank info
+    stellar_wallet = Column(String(255), nullable=True) # Organization's XLM wallet
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships

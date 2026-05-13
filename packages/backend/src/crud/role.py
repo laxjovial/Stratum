@@ -27,3 +27,5 @@ def assign_role_to_user(db: Session, user_id: uuid.UUID, role_id: uuid.UUID):
         db.commit()
         db.refresh(db_user)
     return db_user
+def get_roles_by_organization(db: Session, organization_id: uuid.UUID):
+    return db.query(models.Role).filter(models.Role.organization_id == organization_id).all()
